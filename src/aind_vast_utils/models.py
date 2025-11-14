@@ -1,6 +1,6 @@
 """Models of VAST API responses. Schemas are from their API docs."""
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, Field
