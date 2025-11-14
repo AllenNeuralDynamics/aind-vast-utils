@@ -10,10 +10,24 @@
 Package to help parse VAST metrics and send custom notifications.
 
 ## Usage
- - Requires credentials for VAST REST API.
- - To print reports, run `python -m aind_vast_utils.compile_metrics_job`
- - To save a reports as csv, `python -m aind_vast_utils.compile_metrics_job --output_location "."`
- - To save a report to aws s3 as parquet, `python -m aind_vast_utils.compile_metrics_job --output_location "s3://bucket/path"`
+ - Requires credentials for VAST REST API. If credentials are stored in AWS Secrets Manager, then an env var can be set:
+```bash
+export AWS_SECRETS_MANAGER_SECRET_ID=/path/to/secret
+```
+ - To print reports to console:
+```bash
+python -m aind_vast_utils.compile_metrics_job
+```
+
+ - To save a reports as csv:
+```bash
+python -m aind_vast_utils.compile_metrics_job --output_location "."
+```
+
+ - To save a report to aws s3 as parquet:
+```bash
+python -m aind_vast_utils.compile_metrics_job --output_location "s3://bucket/path"
+```
 
 ## Level of Support
 Please indicate a level of support:
