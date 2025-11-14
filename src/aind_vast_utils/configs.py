@@ -13,7 +13,7 @@ class JobSettings(
     cli_parse_args=True,
     cli_ignore_unknown_args=True,
 ):
-    """Settings needed to connect to LabTracks Database"""
+    """Settings needed to run CompileMetricsJob"""
 
     # noinspection SpellCheckingInspection
     model_config = SettingsConfigDict(env_prefix="VAST_")
