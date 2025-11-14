@@ -16,6 +16,9 @@ jobs:
       - name: Pull latest changes
         run: |
           git pull origin main
+      - name: Fetch tags
+        run: |
+          git fetch --prune --unshallow --tags
           v_tag=$(git describe --tags $(git rev-list --tags --max-count=1))
           tag="${v_tag:1}"
           echo "docker_tag=$tag" >> "$GITHUB_ENV"
