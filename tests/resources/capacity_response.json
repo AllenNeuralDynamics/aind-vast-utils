@@ -1,0 +1,70 @@
+{
+   "details": [
+      [
+         "/aind/scratch",
+         {
+            "data": [
+               318535641364598,
+               276370399582092,
+               771249318149374
+            ],
+            "parent": "/aind",
+            "percent": 100,
+            "average_atime": "2024-12-17 09:55"
+         }
+      ],
+      [
+         "/aind/scratch/ophys",
+         {
+            "data": [
+               31436537147351,
+               26412466407190,
+               275667807998781
+            ],
+            "parent": "/aind/scratch",
+            "percent": 9.87,
+            "average_atime": "2025-02-06 23:44"
+         }
+      ]
+   ],
+   "keys": [
+      "usable",
+      "unique",
+      "logical"
+   ],
+   "time": "2025-11-12 18:59:00",
+   "sort_key": "usable",
+   "root_data": [
+      3128954951249558,
+      2689008553951633,
+      5441825959464217
+   ],
+   "small_folders": [
+      [
+         "/aind/scratch/abc",
+         {
+            "data": [
+               5143983132,
+               5018378864,
+               15452267346
+            ],
+            "parent": "/aind/scratch",
+            "percent": 0.0,
+            "average_atime": "2025-05-30 17:28"
+         }
+      ],
+      [
+         "/aind/scratch/def",
+         {
+            "data": [
+               4139968368,
+               1272458632,
+               30855765913
+            ],
+            "parent": "/aind/scratch",
+            "percent": 0.0,
+            "average_atime": "2024-02-03 05:43"
+         }
+      ]
+   ]
+}
