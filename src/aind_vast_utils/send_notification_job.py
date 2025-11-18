@@ -17,27 +17,6 @@ from pydantic_settings import SettingsConfigDict
 
 logging.basicConfig(level=logging.INFO)
 
-# template_string = """
-# <div><p>We have reached a limit for data storage on VAST</p></div>
-# <hr style="border-top: dashed 2px;">
-# <div>
-# {{ quotas_table | safe }}
-# </div>
-# {% for row in cap_tables %}
-# <div>
-# <p> {{ row[0] }} </p>
-# {{ row[1] | safe }}
-# </div>
-# {% endfor %}
-# <div>
-# <p>
-# DISCLAIMER:
-# These are numbers estimated by VAST using statistical sampling.
-# </p>
-# </div>
-# """
-# template = Template(template_string)
-
 
 class JobSettings(
     SecretsManagerBaseSettings,
