@@ -10,7 +10,7 @@ jobs:
       repo-token: ${{ secrets.SERVICE_TOKEN }}
   publish_image:
     needs: tag
-    uses: AllenNeuralDynamics/.github/.github/workflows/publish-docker-image.yml@main
+    uses: AllenNeuralDynamics/.github/.github/workflows/release-publish-docker-image.yml@main
     with:
       docker-tag: needs.tag.outputs.new_version
     secrets:
