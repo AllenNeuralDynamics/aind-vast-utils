@@ -9,34 +9,10 @@ jobs:
     secrets:
       repo-token: ${{ secrets.SERVICE_TOKEN }}
   publish_image:
-    runs-on: ubuntu-latest
     needs: tag
-    steps:
-      - uses: actions/checkout@v4
-      - name: Pull latest changes
-        run: |
-          git pull origin main
-      - name: Fetch tags
-        run: |
-          git fetch --prune --unshallow --tags
-          v_tag=$(git describe --tags $(git rev-list --tags --max-count=1))
-          tag="${v_tag:1}"
-          echo "docker_tag=$tag" >> "$GITHUB_ENV"
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Login to Github Packages
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build image and push to GitHub Container Registry
-        uses: docker/build-push-action@v3
-        with:
-          # relative path to the place where source code with Dockerfile is located
-          context: .
-          push: true
-          tags: |
-            ghcr.io/allenneuraldynamics/aind-vast-utils:${{ env.docker_tag }}
-            ghcr.io/allenneuraldynamics/aind-vast-utils:latest
+    uses: AllenNeuralDynamics/.github/.github/workflows/publish-docker-image.yml@main
+    with:
+      docker-tag: needs.tag.outputs.new_version
+    secrets:
+      repo-token: ${{ secrets.SERVICE_TOKEN }}
+
