@@ -10,8 +10,7 @@ from unittest.mock import MagicMock, patch
 from pydantic import SecretStr
 from pydantic_core import TzInfo
 
-from aind_vast_utils.compile_metrics_job import CompileMetricsJob
-from aind_vast_utils.configs import JobSettings
+from aind_vast_utils.compile_metrics_job import CompileMetricsJob, JobSettings
 from aind_vast_utils.models import Capacity, CapacityData, Quota
 
 RESOURCES_DIR = Path(os.path.dirname(os.path.realpath(__file__))) / "resources"
@@ -21,6 +20,7 @@ class TestCompileMetricsJob(unittest.TestCase):
     """Tests CompileMetricsJob class."""
 
     @classmethod
+    @patch.dict(os.environ, {}, clear=True)
     def setUpClass(cls):
         """Set up class with mocked responses and default test job."""
 
@@ -40,7 +40,6 @@ class TestCompileMetricsJob(unittest.TestCase):
         cls.mock_vast_client.return_value.quotas.get.return_value = (
             quotas_response
         )
-
         job_settings = JobSettings(
             address="example.com",
             user="user",

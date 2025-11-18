@@ -1,0 +1,2 @@
+report_datetime,path,state,used_capacity,soft_limit,hard_limit,percent_capacity,report_date,report_year
+2025-11-12 08:00:00+00:00,/aind/scratch,SOFT_EXCEEDED,775337561472891,747667906887680,786150813859840,98,2025-11-12,2025
