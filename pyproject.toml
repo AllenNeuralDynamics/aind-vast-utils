@@ -22,7 +22,8 @@ dependencies = [
     "vastpy",
     "pandas",
     "awswrangler",
-    "jinja2"
+    "jinja2",
+    "requests"
 ]
 
 [dependency-groups]
