@@ -131,7 +131,7 @@ class SendNotificationJob:
         top 3 subfolders.
         """
         top_df = (
-            df[(df["parent"] == path) & (df["is_small_folders"] is False)]
+            df[(df["parent"] == path) & (df["is_small_folders"].eq(False))]
             .sort_values(by="logical", ascending=False)
             .head(5)
         )
@@ -204,8 +204,8 @@ class SendNotificationJob:
         quota_df = self._get_table("quota")
         problem_quota_df = self._format_quota_table(quota_df)
         problem_paths = problem_quota_df["Path"]
-        dfs_to_report = []
         if len(problem_paths) > 0:
+            dfs_to_report = []
             capacity_df = self._get_table("capacity")
             for problem_path in sorted(problem_paths):
                 dfs_to_report.append(
