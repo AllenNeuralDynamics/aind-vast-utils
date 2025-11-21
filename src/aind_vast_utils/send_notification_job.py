@@ -173,13 +173,13 @@ class SendNotificationJob:
         </div>
         {% for row in cap_tables %}
         <div>
-        <p> Stats for: <b> {{ row[0] }} <b> </p>
+        <p> Stats for: <b> {{ row[0] }} </b> </p>
         {{ row[1] | safe }}
         </div>
         {% endfor %}
         <div>
         <p>
-        <br><b>DISCLAIMER:<b>
+        <br><b>DISCLAIMER:</b>
         <br>These are numbers estimated by VAST using statistical sampling.
         </p>
         </div>
