@@ -144,6 +144,7 @@ class SendNotificationJob:
         sub_folders_df = df[df["parent"].isin(top_folder_names)].sort_values(
             by="logical", ascending=False
         )
+        sub_folders_df["path"] = "    " + df["path"].astype(str)
         sub_folders_df["sort_key"] = sub_folders_df["parent"].map(sort_key_map)
         sub_folders_df["sort_key2"] = range(1, len(sub_folders_df) + 1)
         sub_folders_df = sub_folders_df.groupby("sort_key").head(3)
@@ -172,14 +173,14 @@ class SendNotificationJob:
         </div>
         {% for row in cap_tables %}
         <div>
-        <p> {{ row[0] }} </p>
+        <p> Stats for: <b> {{ row[0] }} </b> </p>
         {{ row[1] | safe }}
         </div>
         {% endfor %}
         <div>
         <p>
-        DISCLAIMER:
-        These are numbers estimated by VAST using statistical sampling.
+        <br><b>DISCLAIMER:</b>
+        <br>These are numbers estimated by VAST using statistical sampling.
         </p>
         </div>
         """
