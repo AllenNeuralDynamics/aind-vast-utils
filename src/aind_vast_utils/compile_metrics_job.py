@@ -27,11 +27,8 @@ from aind_vast_utils.models import (
     QuotaTableRow,
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# before_sleep=before_sleep_log(logger, logging.WARNING)
-
+logger.setLevel(logging.INFO)
 
 class JobSettings(
     SecretsManagerBaseSettings,
