@@ -30,6 +30,7 @@ from aind_vast_utils.models import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class JobSettings(
     SecretsManagerBaseSettings,
     cli_parse_args=True,
