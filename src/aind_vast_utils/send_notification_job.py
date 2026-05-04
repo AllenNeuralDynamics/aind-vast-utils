@@ -15,7 +15,8 @@ from pandas import DataFrame
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class JobSettings(
@@ -61,9 +62,6 @@ class SendNotificationJob:
             path = f"{self.job_settings.tables_location}/{table_name}"
             report_date = self.job_settings.report_date
             report_year = report_date.year
-            # my_filter = lambda x: x["report_year"] == str(report_year) and x[
-            #     "report_date"
-            # ] == str(report_date)
             df = wr.s3.read_parquet(
                 path,
                 dataset=True,
@@ -222,8 +220,8 @@ class SendNotificationJob:
             )
             self.send_notification(html_str)
         else:
-            logging.info("All quotas good.")
-            logging.info(quota_df.to_string(index=False))
+            logger.info("All quotas good.")
+            logger.info(quota_df.to_string(index=False))
 
 
 if __name__ == "__main__":

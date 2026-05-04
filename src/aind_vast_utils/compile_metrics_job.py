@@ -12,6 +12,12 @@ import pandas as pd
 from aind_settings_utils.aws import SecretsManagerBaseSettings
 from pydantic import Field, SecretStr
 from pydantic_settings import SettingsConfigDict
+from tenacity import (
+    before_sleep_log,
+    retry,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 from vastpy import VASTClient
 
 from aind_vast_utils.models import (
@@ -21,7 +27,8 @@ from aind_vast_utils.models import (
     QuotaTableRow,
 )
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class JobSettings(
@@ -72,6 +79,12 @@ class CompileMetricsJob:
             address=job_settings.address,
         )
 
+    @retry(
+        wait=wait_exponential_jitter(initial=1, max=60, exp_base=2, jitter=1),
+        stop=stop_after_attempt(5),
+        reraise=True,
+        before_sleep=before_sleep_log(logger, logging.WARNING),  # type: ignore
+    )
     def _get_capacity(self, path: str, sort_key: str = "logical") -> Capacity:
         """Get capacity info for VAST cluster."""
 
@@ -81,6 +94,12 @@ class CompileMetricsJob:
         )
         return Capacity.model_validate(response)
 
+    @retry(
+        wait=wait_exponential_jitter(initial=1, max=60, exp_base=2, jitter=1),
+        stop=stop_after_attempt(5),
+        reraise=True,
+        before_sleep=before_sleep_log(logger, logging.WARNING),  # type: ignore
+    )
     def _get_quota(self, path: str) -> Quota:
         """Get quota info for VAST cluster."""
 

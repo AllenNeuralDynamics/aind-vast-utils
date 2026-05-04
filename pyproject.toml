@@ -23,7 +23,8 @@ dependencies = [
     "pandas",
     "awswrangler",
     "jinja2",
-    "requests"
+    "requests",
+    "tenacity"
 ]
 
 [dependency-groups]
@@ -84,5 +85,5 @@ profile = "black"
 skip = [".conda"]
 
 [tool.interrogate]
-exclude = ["setup.py", "docs", "build", ".conda"]
+exclude = ["setup.py", "docs", "build", ".conda", "env"]
 fail-under = 100
