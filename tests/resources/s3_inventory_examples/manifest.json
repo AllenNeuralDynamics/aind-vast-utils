@@ -1,0 +1,17 @@
+{
+  "sourceBucket" : "example-bucket",
+  "destinationBucket" : "arn:aws:s3:::inventory-bucket",
+  "version" : "2016-11-30",
+  "creationTimestamp" : "1780794000000",
+  "fileFormat" : "CSV",
+  "fileSchema" : "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, LastModifiedDate, ETag, StorageClass, IntelligentTieringAccessTier",
+  "files" : [ {
+    "key" : "inventory-prefix/data/4af35350-4b46-4fa0-bc20-2bb1d4a93b4e.csv.gz",
+    "size" : 188426409,
+    "MD5checksum" : "0ff2f0eba02170d7d701101c4022b15b"
+  }, {
+    "key" : "inventory-prefix/data/db376679-71ec-4d68-a919-4cae625d636e.csv.gz",
+    "size" : 62668938,
+    "MD5checksum" : "3c7a5e97f19725392746029354d9f6da"
+  } ]
+}

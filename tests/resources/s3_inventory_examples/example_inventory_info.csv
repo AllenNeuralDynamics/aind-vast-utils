@@ -1,0 +1,8 @@
+example-bucket,SmartSPIM_782747_2025-03-24_17-26-26/SPIM/file1.txt,Y0lY171f2mCN1n3UhlceODUk6Lli9kvC,true,false,3609863,2025-05-07T16:07:35.000-07:00,5f92c272ec97f7dd599ffdafcfa7d0f7,INTELLIGENT_TIERING,ARCHIVE_INSTANT_ACCESS
+example-bucket,SmartSPIM_782747_2025-03-24_17-26-26/SPIM/file2.txt,XLEzBQcXgmVbAfiz5uemW_CtI10DaNDX,true,false,3590520,2025-05-07T16:01:14.000-07:00,841b4b3657432e0e0a18c028bacf3331,INTELLIGENT_TIERING,ARCHIVE_INSTANT_ACCESS
+example-bucket,SmartSPIM_782747_2025-03-24_17-26-26/SPIM/file3.txt,1DBoGs4SU1zDTQNFs8R2TdK8.EW3pInv,true,false,3647042,2025-05-07T16:03:31.000-07:00,402250d66dd95eb773e0a647fa320ccc,STANDARD,
+example-bucket,behavior_844782_2026-05-05_09-58-34/behavior-videos/vid1.mp4,9E2Ejpm4VXVfyLa13K6l5x8yvwgnrq.e,true,false,3672403,2025-05-07T16:03:43.000-07:00,1fac596840643a56ca8a6ba09f687175,STANDARD,
+example-bucket,behavior_844782_2026-05-05_09-58-34/behavior-videos/vid2.mp4,Z4ihy2F5CWjZDW71dlRELRaC5ThhGSy7,true,false,4872403,2025-05-07T16:03:43.000-07:00,tbmmuwud0iiwwtyqlmje9rwqzhxl7dxg,STANDARD,
+example-bucket,behavior_781900_2025-06-04_13-35-13/behavior-videos/vid1.mp4,QiP72WC6tk0egCBUvtV3SJtz1FlwRHfW,true,false,5000000,2025-05-07T16:03:43.000-07:00,zbtm6pbnb8agz87f5ungiepl1otcismz,STANDARD,
+example-bucket,822683_2026-03-03_16-37-05_pr_2026-03-04_11-48-56/behavior/output.txt,78q7ja7Os8S5obPWp29ZTgegSKHXzM0M,true,false,300,2025-05-07T16:03:43.000-07:00,9pesjlil9b1xd283bi7e3ppbvlghrj2s,STANDARD,
+example-bucket,822683_2026-03-03_16-09-10/behavior/hello_world.txt,FJN2FIPBcztHJ5miPWtsESJ10BJbH63i,true,false,500,2025-05-07T16:03:43.000-07:00,yfb9esl1zphvj6xsp1zwdoaxdfytlf2g,STANDARD,
