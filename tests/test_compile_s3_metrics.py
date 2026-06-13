@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
-from aind_vast_utils.compile_s3_metrics import (
+from aind_vast_utils.compile_s3_metrics_job import (
     CompileS3MetricsJob,
     JobSettings,
 )
@@ -19,7 +19,7 @@ from pyspark.testing import assertDataFrameEqual  # noqa: E402
 
 RESOURCES_DIR = Path(os.path.dirname(os.path.realpath(__file__))) / "resources"
 RESPONSES_DIR = RESOURCES_DIR / "s3_inventory_examples"
-CLS_REF = "aind_vast_utils.compile_s3_metrics.CompileS3MetricsJob"
+CLS_REF = "aind_vast_utils.compile_s3_metrics_job.CompileS3MetricsJob"
 
 
 class TestCompileS3MetricsJob(unittest.TestCase):
@@ -81,7 +81,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
     def tearDownClass(cls):
         cls.spark.stop()
 
-    @patch("aind_vast_utils.compile_s3_metrics.MetadataDbClient")
+    @patch("aind_vast_utils.compile_s3_metrics_job.MetadataDbClient")
     def test_get_docdb_info(self, mock_docdb_client: MagicMock):
 
         mock_docdb_client.return_value.retrieve_docdb_records.return_value = (
