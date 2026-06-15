@@ -13,6 +13,6 @@ ADD src ./src
 ADD pyproject.toml .
 ADD setup.py .
 
-# Add git in case we need to install from branches
-RUN apt-get update && apt-get install -y git
+EXPOSE 4040
+
 RUN pip install . --no-cache-dir
