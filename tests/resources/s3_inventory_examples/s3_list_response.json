@@ -1,0 +1,40 @@
+[
+   {
+      "ResponseMetadata": {
+         "RequestId": "ABC",
+         "HostId": "123",
+         "HTTPStatusCode": 200,
+         "HTTPHeaders": {
+            "x-amz-id-2": "123",
+            "x-amz-request-id": "ABC",
+            "date": "Sat, 13 Jun 2026 19:14:56 GMT",
+            "x-amz-bucket-region": "us-west-2",
+            "content-type": "application/xml",
+            "transfer-encoding": "chunked",
+            "server": "AmazonS3"
+         },
+         "RetryAttempts": 0
+      },
+      "IsTruncated": false,
+      "Name": "inventory-bucket",
+      "Prefix": "inventory-prefix/",
+      "Delimiter": "/",
+      "MaxKeys": 1000,
+      "CommonPrefixes": [
+         {
+            "Prefix": "inventory-prefix/2026-05-31T01-00Z/"
+         },
+         {
+            "Prefix": "inventory-prefix/2026-06-07T01-00Z/"
+         },
+         {
+            "Prefix": "inventory-prefix/data/"
+         },
+         {
+            "Prefix": "inventory-prefix/hive/"
+         }
+      ],
+      "EncodingType": "url",
+      "KeyCount": 4
+   }
+]

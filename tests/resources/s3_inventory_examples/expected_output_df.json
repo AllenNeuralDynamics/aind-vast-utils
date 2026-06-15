@@ -1,0 +1,56 @@
+[
+   {
+      "prefix": "SmartSPIM_782747_2025-03-24_17-26-26",
+      "bucket": "example-bucket",
+      "subprefix": "SmartSPIM_782747_2025-03-24_17-26-26/SPIM",
+      "storage_class": "INTELLIGENT_TIERING",
+      "intelligent_tiering_access_tier": "ARCHIVE_INSTANT_ACCESS",
+      "size_in_bytes": 7200383,
+      "project_name": "Project 1",
+      "report_date": "2026-06-07T01-00Z"
+   },
+   {
+      "prefix": "SmartSPIM_782747_2025-03-24_17-26-26",
+      "bucket": "example-bucket",
+      "subprefix": "SmartSPIM_782747_2025-03-24_17-26-26/SPIM",
+      "storage_class": "STANDARD",
+      "size_in_bytes": 3647042,
+      "project_name": "Project 1",
+      "report_date": "2026-06-07T01-00Z"
+   },
+   {
+      "prefix": "behavior_844782_2026-05-05_09-58-34",
+      "bucket": "example-bucket",
+      "subprefix": "behavior_844782_2026-05-05_09-58-34/behavior-videos",
+      "storage_class": "STANDARD",
+      "size_in_bytes": 8544806,
+      "project_name": "Project 2",
+      "report_date": "2026-06-07T01-00Z"
+   },
+   {
+      "prefix": "behavior_781900_2025-06-04_13-35-13",
+      "bucket": "example-bucket",
+      "subprefix": "behavior_781900_2025-06-04_13-35-13/behavior-videos",
+      "storage_class": "STANDARD",
+      "size_in_bytes": 5000000,
+      "project_name": "Project 2",
+      "report_date": "2026-06-07T01-00Z"
+   },
+   {
+      "prefix": "822683_2026-03-03_16-37-05_pr_2026-03-04_11-48-56",
+      "bucket": "example-bucket",
+      "subprefix": "822683_2026-03-03_16-37-05_pr_2026-03-04_11-48-56/behavior",
+      "storage_class": "STANDARD",
+      "size_in_bytes": 300,
+      "project_name": "Project 3",
+      "report_date": "2026-06-07T01-00Z"
+   },
+   {
+      "prefix": "822683_2026-03-03_16-09-10",
+      "bucket": "example-bucket",
+      "subprefix": "822683_2026-03-03_16-09-10/behavior",
+      "storage_class": "STANDARD",
+      "size_in_bytes": 500,
+      "report_date": "2026-06-07T01-00Z"
+   }
+]

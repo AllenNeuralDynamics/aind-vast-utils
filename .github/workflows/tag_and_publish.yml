@@ -15,4 +15,3 @@ jobs:
       docker-tag: ${{ needs.tag.outputs.new_version }}
     secrets:
       repo-token: ${{ secrets.SERVICE_TOKEN }}
-
