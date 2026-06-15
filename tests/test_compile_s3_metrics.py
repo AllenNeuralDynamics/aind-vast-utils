@@ -1,3 +1,5 @@
+"""Tests compile_s3_metrics_job module."""
+
 import json
 import os
 import unittest
@@ -23,9 +25,11 @@ CLS_REF = "aind_vast_utils.compile_s3_metrics_job.CompileS3MetricsJob"
 
 
 class TestCompileS3MetricsJob(unittest.TestCase):
+    """Tests CompileS3MetricsJob class."""
 
     @classmethod
     def setUpClass(cls):
+        """Sets up a local spark session and parses resource files."""
 
         # There is a known issue when calling the assertDataFrameEqual function
         # which calls pyspark.pandas. The spark session is stopped in the
@@ -79,10 +83,12 @@ class TestCompileS3MetricsJob(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Stop spark session when tests are finished."""
         cls.spark.stop()
 
     @patch("aind_vast_utils.compile_s3_metrics_job.MetadataDbClient")
     def test_get_docdb_info(self, mock_docdb_client: MagicMock):
+        """Tests _get_docdb_info method."""
 
         mock_docdb_client.return_value.retrieve_docdb_records.return_value = (
             self.example_docdb_response
@@ -93,6 +99,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
 
     @patch("boto3.client")
     def test_get_latest_manifest(self, mock_boto_client: MagicMock):
+        """Tests _get_latest_manifest method."""
         mock_s3_instance = MagicMock()
         mock_paginator = MagicMock()
         mock_boto_client.return_value = mock_s3_instance
@@ -109,6 +116,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
 
     @patch("boto3.client")
     def test_get_latest_manifest_error(self, mock_boto_client: MagicMock):
+        """Tests _get_latest_manifest method when there is an error."""
         mock_s3_instance = MagicMock()
         mock_paginator = MagicMock()
         mock_boto_client.return_value = mock_s3_instance
@@ -119,6 +127,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
 
     @patch("pyspark.sql.DataFrameReader.json")
     def test_get_inventory_list(self, mock_spark_read_json: MagicMock):
+        """Tests _get_inventory_list method."""
         mock_df = MagicMock()
         mock_json_df = MagicMock()
         expected_json = json.dumps(self.example_manifest)
@@ -145,6 +154,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
         self.assertEqual(response, expected_response)
 
     def test_get_inventory_df(self):
+        """Tests _get_inventory_df method."""
 
         docdb_info = self.example_docdb_info
         joined_df = self.job._get_inventory_df(
@@ -162,6 +172,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
 
     @patch("pyspark.sql.DataFrameWriter.parquet")
     def test_write_df(self, mock_write_parquet: MagicMock):
+        """Tests _write_df method."""
         test_df = self.spark.createDataFrame([(1, "foo")], ["id", "value"])
         self.job._write_df(test_df)
         mock_write_parquet.assert_called_once_with("test_output_path")
@@ -179,6 +190,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
         mock_get_latest_manifest: MagicMock,
         mock_get_docdb_info: MagicMock,
     ):
+        """Tests run_job method."""
         mock_get_docdb_info.return_value = self.example_docdb_info
         latest_manifest_location = (
             "inventory-bucket/inventory-prefix/2026-06-07T01-00Z/manifest.json"
