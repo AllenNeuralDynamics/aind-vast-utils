@@ -1,5 +1,5 @@
 """
-Module for compiling metrics about our S3 metrics.
+Module for compiling metrics about our S3 buckets.
 """
 
 import json
@@ -71,8 +71,16 @@ class JobSettings(
         title="S3 Bucket",
         description="The bucket that is being analyzed for it's metrics.",
     )
-    output_location: str = Field(...)
-    docdb_host: str = Field(..., title="DocDB Host", description="DocDB Host")
+    output_location: str = Field(
+        ...,
+        title="Output Location",
+        description="Output location for writing dataframe",
+    )
+    docdb_host: str = Field(
+        ...,
+        title="DocDB Host",
+        description="Host for data asset metadata index",
+    )
     spark_configs: Dict[str, str] = Field(
         {
             "spark.app.name": "S3InventoryMetrics",
@@ -97,9 +105,17 @@ class CompileS3MetricsJob:
         self.job_settings = job_settings
         self.spark = spark
 
-    def _get_docdb_info(self) -> List[Tuple[str]]:
-        """Get s3 location and project name from DocDB. This information is
-        probably small enough to fit into memory."""
+    def _get_docdb_info(self) -> List[Tuple[str, str]]:
+        """
+        Get s3 location and project name from DocDB. This information is
+        probably small enough to fit into memory.
+
+        Returns
+        -------
+        List[Tuple[str, str]]
+          A list of (prefix, project_name) tuples.
+
+        """
         bucket = self.job_settings.bucket
         docdb_api_client = MetadataDbClient(
             host=self.job_settings.docdb_host,
@@ -121,9 +137,17 @@ class CompileS3MetricsJob:
         return mapped_records
 
     def _get_latest_manifest(self) -> Tuple[str, str]:
-        """Get latest manifest location."""
+        """
+        Get latest manifest location.
+
+        Returns
+        -------
+        Tuple[str, str]
+          (location of manifest json file, report date)
+
+        """
         bucket = self.job_settings.s3_inventory_bucket
-        prefix = self.job_settings.s3_inventory_prefix
+        prefix = self.job_settings.s3_inventory_prefix.strip("/") + "/"
         regex_pattern = r".*(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}Z)"
         s3 = boto3.client("s3")
         paginator = s3.get_paginator("list_objects_v2")
@@ -149,6 +173,21 @@ class CompileS3MetricsJob:
             )
 
     def _get_inventory_list(self, manifest_location: str) -> List[str]:
+        """
+        AWS stores the inventory across multiple csv files. This method parses
+        the manifest file to extract these locations as a list.
+
+        Parameters
+        ----------
+        manifest_location : str
+          Location of the manifest file in S3
+
+        Returns
+        -------
+        List[str]
+          A list of s3 uris for the csv files that need to be parsed.
+
+        """
         bucket = self.job_settings.s3_inventory_bucket
         manifest = json.loads(
             self.spark.read.option("multiLine", "true")
@@ -161,8 +200,30 @@ class CompileS3MetricsJob:
         return s3_paths
 
     def _get_inventory_df(
-        self, s3_paths: list, docdb_records: list, report_date: str
+        self,
+        s3_paths: List[str],
+        docdb_records: List[Tuple[str, str]],
+        report_date: str,
     ) -> DataFrame:
+        """
+        Parses the csv files and joins information from DocDB. The DataFrame is
+        lazily evaluated.
+        Parameters
+        ----------
+        s3_paths : List[str]
+        docdb_records : List[Tuple[str, str]]
+        report_date : str
+
+        Returns
+        -------
+        DataFrame
+          Columns (
+          bucket, prefix, subprefix, storage_class,
+          intelligent_tiering_access_tier, size_in_bytes, project_name,
+          report_date
+          )
+
+        """
         full_df = (
             self.spark.read.format("csv")
             .option("header", "false")
@@ -223,6 +284,13 @@ class CompileS3MetricsJob:
         return joined_df
 
     def _write_df(self, df: DataFrame):
+        """
+        Write the dataframe. This may take some time to complete.
+        Parameters
+        ----------
+        df : DataFrame
+
+        """
         output_location = self.job_settings.output_location
         df.write.parquet(output_location)
 
