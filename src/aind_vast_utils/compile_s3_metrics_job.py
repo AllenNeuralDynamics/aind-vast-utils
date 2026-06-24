@@ -7,44 +7,55 @@ import logging
 import os
 import re
 import sys
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import boto3
 import pyspark.sql.functions as F
 from aind_data_access_api.document_db import MetadataDbClient
 from aind_settings_utils.aws import SecretsManagerBaseSettings
-from pydantic import Field
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import SettingsConfigDict
 from pyspark import SparkConf
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import (
-    BooleanType,
-    IntegerType,
     StringType,
     StructField,
     StructType,
-    TimestampType,
 )
 
 logger = logging.getLogger(__name__)
 level = os.getenv("LOG_LEVEL", logging.INFO)
 logger.setLevel(level)
 
-# Current schema of the csv files in the S3 Inventory report
-CSV_SCHEMA = StructType(
-    [
-        StructField("Bucket", StringType(), True),
-        StructField("Key", StringType(), True),
-        StructField("VersionId", StringType(), True),
-        StructField("IsLatest", BooleanType(), True),
-        StructField("IsDeleteMarker", BooleanType(), True),
-        StructField("Size", IntegerType(), True),
-        StructField("LastModifiedDate", TimestampType(), True),
-        StructField("ETag", StringType(), True),
-        StructField("StorageClass", StringType(), True),
-        StructField("IntelligentTieringAccessTier", StringType(), True),
-    ]
-)
+
+class OutputTarget(BaseModel):
+    """OutputTarget model."""
+
+    output_type: Literal["parquet", "postgres"] = Field("parquet")
+    table_name: str = Field("weekly_report")
+    output_location: Optional[str] = Field(None)
+    db_username: Optional[str] = Field(None)
+    db_password: Optional[SecretStr] = Field(None)
+    db_url: Optional[str] = Field(None)
+    db_save_mode: Literal["overwrite", "append", "ignore", "errorifexists"] = (
+        Field(default="overwrite")
+    )
+
+    @model_validator(mode="after")
+    def check_output_type_requirements(self) -> "OutputTarget":
+        """Check fields are not None depending on format."""
+        if self.output_type == "parquet" and self.output_location is None:
+            raise ValueError(
+                "output_location must be specified for parquet output_type!"
+            )
+        elif self.output_type == "postgres" and any(
+            x is None
+            for x in (self.db_username, self.db_password, self.db_url)
+        ):
+            raise ValueError(
+                "db settings must be specified for postgres output_type!"
+            )
+        return self
 
 
 class JobSettings(
@@ -56,6 +67,80 @@ class JobSettings(
 
     # noinspection SpellCheckingInspection
     model_config = SettingsConfigDict(env_prefix="CompileS3MetricsJob_")
+    inventory_format: Literal["csv", "parquet"] = Field(
+        default="parquet",
+        title="Inventory Format",
+        description="File format the inventory is stored under",
+    )
+    inventory_schema: Dict[str, Any] = Field(
+        default={
+            "fields": [
+                {
+                    "metadata": {},
+                    "name": "bucket",
+                    "nullable": True,
+                    "type": "string",
+                },
+                {
+                    "metadata": {},
+                    "name": "key",
+                    "nullable": True,
+                    "type": "string",
+                },
+                {
+                    "metadata": {},
+                    "name": "version_id",
+                    "nullable": True,
+                    "type": "string",
+                },
+                {
+                    "metadata": {},
+                    "name": "is_latest",
+                    "nullable": True,
+                    "type": "boolean",
+                },
+                {
+                    "metadata": {},
+                    "name": "is_delete_marker",
+                    "nullable": True,
+                    "type": "boolean",
+                },
+                {
+                    "metadata": {},
+                    "name": "size",
+                    "nullable": True,
+                    "type": "long",
+                },
+                {
+                    "metadata": {},
+                    "name": "last_modified_date",
+                    "nullable": True,
+                    "type": "timestamp",
+                },
+                {
+                    "metadata": {},
+                    "name": "e_tag",
+                    "nullable": True,
+                    "type": "string",
+                },
+                {
+                    "metadata": {},
+                    "name": "storage_class",
+                    "nullable": True,
+                    "type": "string",
+                },
+                {
+                    "metadata": {},
+                    "name": "intelligent_tiering_access_tier",
+                    "nullable": True,
+                    "type": "string",
+                },
+            ],
+            "type": "struct",
+        },
+        title="Inventory Schema",
+        description="Schema of the inventory files",
+    )
     s3_inventory_bucket: str = Field(
         ...,
         title="S3 Inventory Bucket",
@@ -71,10 +156,10 @@ class JobSettings(
         title="S3 Bucket",
         description="The bucket that is being analyzed for it's metrics.",
     )
-    output_location: str = Field(
-        ...,
-        title="Output Location",
-        description="Output location for writing dataframe",
+    output_target: Optional[OutputTarget] = Field(
+        None,
+        title="Output Target",
+        description="Output target for writing dataframe",
     )
     docdb_host: str = Field(
         ...,
@@ -85,11 +170,11 @@ class JobSettings(
         {
             "spark.app.name": "S3InventoryMetrics",
             "spark.jars.packages": (
-                "org.apache.hadoop:hadoop-aws:3.3.2,"
-                "com.amazonaws:aws-java-sdk-bundle:1.11.1026"
+                "org.apache.hadoop:hadoop-aws:3.4.1,"
+                "com.amazonaws:aws-java-sdk-bundle:1.12.262"
             ),
             "spark.hadoop.fs.s3a.aws.credentials.provider": (
-                "com.amazonaws.auth.DefaultAWSCredentialsProviderChain"
+                "com.amazonaws.auth.profile.ProfileCredentialsProvider"
             ),
         }
     )
@@ -199,9 +284,36 @@ class CompileS3MetricsJob:
         s3_paths = [f"s3a://{bucket}/{obj_key}" for obj_key in object_keys]
         return s3_paths
 
-    def _get_inventory_df(
+    def _get_inventory_df(self, s3_paths: List[str]) -> DataFrame:
+        """
+        Get the inventory DataFrame from S3.
+
+        Parameters
+        ----------
+        s3_paths : List[str]
+          S3 paths of the files to be parsed.
+
+        Returns
+        -------
+        DataFrame
+
+        """
+        inventory_schema = StructType.fromJson(
+            self.job_settings.inventory_schema
+        )
+        full_df = (
+            self.spark.read.format(self.job_settings.inventory_format)
+            .option("header", "false")
+            .option("inferSchema", "false")
+            .option("mode", "FAILFAST")
+            .schema(inventory_schema)
+            .load(s3_paths)
+        )
+        return full_df
+
+    def _transform_inventory_df(
         self,
-        s3_paths: List[str],
+        inventory_df: DataFrame,
         docdb_records: List[Tuple[str, str]],
         report_date: str,
     ) -> DataFrame:
@@ -210,7 +322,7 @@ class CompileS3MetricsJob:
         lazily evaluated.
         Parameters
         ----------
-        s3_paths : List[str]
+        inventory_df : DataFrame
         docdb_records : List[Tuple[str, str]]
         report_date : str
 
@@ -219,67 +331,57 @@ class CompileS3MetricsJob:
         DataFrame
           Columns (
           bucket, prefix, subprefix, storage_class,
-          intelligent_tiering_access_tier, size_in_bytes, project_name,
-          report_date
+          intelligent_tiering_access_tier, size_in_bytes, number_of_files,
+          project_name, report_date
           )
 
         """
-        full_df = (
-            self.spark.read.format("csv")
-            .option("header", "false")
-            .schema(CSV_SCHEMA)
-            .load(s3_paths)
-        )
         # noinspection PyCallingNonCallable
         filtered_df = (
-            full_df.withColumn(
-                "Prefix", F.split(full_df["Key"], "/").getItem(0)
+            inventory_df.withColumn(
+                "prefix", F.split(inventory_df["key"], "/").getItem(0)
             )
-            .withColumn("Subpath", F.split(full_df["Key"], "/").getItem(1))
             .withColumn(
-                "Subprefix",
-                F.concat_ws("/", F.col("Prefix"), F.col("Subpath")),
+                "subpath", F.split(inventory_df["key"], "/").getItem(1)
+            )
+            .withColumn(
+                "subprefix",
+                F.concat_ws("/", F.col("prefix"), F.col("subpath")),
             )
             .where(
-                (F.col("IsLatest") == True)  # noqa: E712
-                & (F.col("IsDeleteMarker") == False)  # noqa: E712
+                (F.col("is_latest") == True)  # noqa: E712
+                & (F.col("is_delete_marker") == False)  # noqa: E712
             )
             .select(
-                F.col("Bucket"),
-                F.col("Prefix"),
-                F.col("Subprefix"),
-                F.col("Size"),
-                F.col("StorageClass"),
-                F.col("IntelligentTieringAccessTier"),
+                F.col("bucket"),
+                F.col("prefix"),
+                F.col("subprefix"),
+                F.col("size"),
+                F.col("storage_class"),
+                F.col("intelligent_tiering_access_tier"),
             )
         )
         docdb_df = self.spark.createDataFrame(
-            docdb_records, ("Prefix", "ProjectName")
+            data=docdb_records,
+            schema=StructType(
+                [
+                    StructField("prefix", StringType(), False),
+                    StructField("project_name", StringType(), True),
+                ]
+            ),
         )
         grouped_df = filtered_df.groupBy(
-            "Bucket",
-            "Prefix",
-            "Subprefix",
-            "StorageClass",
-            "IntelligentTieringAccessTier",
-        ).sum("Size")
-        joined_df = (
-            grouped_df.join(docdb_df, "Prefix", "left").withColumn(
-                "ReportDate", F.lit(report_date)
-            )
-        ).withColumnsRenamed(
-            {
-                "Bucket": "bucket",
-                "Prefix": "prefix",
-                "Subprefix": "subprefix",
-                "StorageClass": "storage_class",
-                "IntelligentTieringAccessTier": (
-                    "intelligent_tiering_access_tier"
-                ),
-                "sum(Size)": "size_in_bytes",
-                "ProjectName": "project_name",
-                "ReportDate": "report_date",
-            }
+            "bucket",
+            "prefix",
+            "subprefix",
+            "storage_class",
+            "intelligent_tiering_access_tier",
+        ).agg(
+            F.sum("size").alias("size_in_bytes"),
+            F.count("size").alias("number_of_files"),
+        )
+        joined_df = grouped_df.join(docdb_df, "prefix", "left").withColumn(
+            "report_date", F.lit(report_date)
         )
         return joined_df
 
@@ -291,8 +393,32 @@ class CompileS3MetricsJob:
         df : DataFrame
 
         """
-        output_location = self.job_settings.output_location
-        df.write.parquet(output_location)
+        output_target = self.job_settings.output_target
+        if output_target is None:
+            logger.info("No target set. Logging first few rows.")
+            for row in df.limit(10).toLocalIterator():
+                logger.info(f"{row}")
+        elif output_target.output_type == "parquet":
+            logger.info("Writing to local parquet files.")
+            output_location = os.path.join(
+                output_target.output_location, output_target.table_name
+            )
+            df.write.parquet(output_location)
+        else:
+            logger.info("Writing to postgres database.")
+            properties = {
+                "user": output_target.db_username,
+                "password": output_target.db_password.get_secret_value(),
+                "driver": "org.postgresql.Driver",
+                "batchsize": "5000",
+                "stringtype": "unspecified",
+            }
+            df.repartition(numPartitions=4).write.jdbc(
+                url=output_target.db_url,
+                table=output_target.table_name,
+                mode=output_target.db_save_mode,
+                properties=properties,
+            )
 
     def run_job(self):
         """Compile the metrics and generate a report."""
@@ -309,8 +435,9 @@ class CompileS3MetricsJob:
         s3_paths = self._get_inventory_list(manifest_location=latest_manifest)
         logger.info(f"Inventory located across {len(s3_paths)} files.")
         logger.info("Defining DataFrame strategy. This may take a minute.")
-        df = self._get_inventory_df(
-            s3_paths=s3_paths,
+        inventory_df = self._get_inventory_df(s3_paths=s3_paths)
+        df = self._transform_inventory_df(
+            inventory_df=inventory_df,
             docdb_records=docdb_records,
             report_date=report_date,
         )
