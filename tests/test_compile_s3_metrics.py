@@ -7,12 +7,14 @@ import warnings
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from pydantic import SecretStr, ValidationError
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
 from aind_vast_utils.compile_s3_metrics_job import (
     CompileS3MetricsJob,
     JobSettings,
+    OutputTarget,
 )
 
 os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
@@ -22,6 +24,33 @@ from pyspark.testing import assertDataFrameEqual  # noqa: E402
 RESOURCES_DIR = Path(os.path.dirname(os.path.realpath(__file__))) / "resources"
 RESPONSES_DIR = RESOURCES_DIR / "s3_inventory_examples"
 CLS_REF = "aind_vast_utils.compile_s3_metrics_job.CompileS3MetricsJob"
+
+
+class TestOutputTarget(unittest.TestCase):
+    """Tests OutputTarget model validators."""
+
+    def test_valid_object(self):
+        """Tests no validation error is raised with valid model."""
+
+        model = OutputTarget(
+            output_type="postgres",
+            db_url="postgresql://example:example@localhost:5432/db_name",
+            db_username="example_user",
+            db_password=SecretStr("12345"),
+        )
+        self.assertEqual("12345", model.db_password.get_secret_value())
+
+    def test_parquet_type_validator(self):
+        """Tests that an error is raised if output_location is None."""
+        with self.assertRaises(ValidationError) as e:
+            _ = OutputTarget(output_type="parquet")
+        self.assertEqual(1, e.exception.error_count())
+
+    def test_postgres_type_validator(self):
+        """Tests that an error is raised if fields are None."""
+        with self.assertRaises(ValidationError) as e:
+            _ = OutputTarget(output_type="postgres", db_username="example")
+        self.assertEqual(1, e.exception.error_count())
 
 
 class TestCompileS3MetricsJob(unittest.TestCase):
@@ -63,8 +92,9 @@ class TestCompileS3MetricsJob(unittest.TestCase):
         job_settings = JobSettings(
             s3_inventory_bucket="inventory-bucket",
             s3_inventory_prefix="inventory-prefix",
+            inventory_format="csv",
             bucket="example-bucket",
-            output_location="test_output_path",
+            output_target=None,
             docdb_host="example.com",
             spark_configs={
                 "spark.app.name": "S3InventoryMetricsTest",
@@ -156,36 +186,108 @@ class TestCompileS3MetricsJob(unittest.TestCase):
     def test_get_inventory_df(self):
         """Tests _get_inventory_df method."""
 
-        docdb_info = self.example_docdb_info
-        joined_df = self.job._get_inventory_df(
+        full_df = self.job._get_inventory_df(
             s3_paths=[str(self.csv_file_location)],
+        )
+        self.assertEqual(8, full_df.count())
+
+    def test_transform_inventory_df(self):
+        """Tests _transform_inventory_df method."""
+
+        docdb_info = self.example_docdb_info
+        full_df = self.job._get_inventory_df(
+            s3_paths=[str(self.csv_file_location)],
+        )
+        joined_df = self.job._transform_inventory_df(
+            inventory_df=full_df,
             docdb_records=docdb_info,
             report_date="2026-06-07T01-00Z",
         )
-        df_schema = joined_df.schema
         expected_output_df = (
             self.spark.read.option("multiLine", True)
-            .schema(df_schema)
+            .schema(joined_df.schema)
             .json(str(self.expected_output_df_file))
         )
         assertDataFrameEqual(joined_df, expected_output_df)
 
+    @patch("pyspark.sql.DataFrameWriter.jdbc")
     @patch("pyspark.sql.DataFrameWriter.parquet")
-    def test_write_df(self, mock_write_parquet: MagicMock):
-        """Tests _write_df method."""
+    def test_write_df_target_none(
+        self, mock_write_parquet: MagicMock, mock_write_jdbc: MagicMock
+    ):
+        """Tests _write_df method when target is None."""
         test_df = self.spark.createDataFrame([(1, "foo")], ["id", "value"])
-        self.job._write_df(test_df)
-        mock_write_parquet.assert_called_once_with("test_output_path")
+        with self.assertLogs(level="INFO") as captured:
+            self.job._write_df(test_df)
+        self.assertEqual(2, len(captured.output))
+        mock_write_parquet.assert_not_called()
+        mock_write_jdbc.assert_not_called()
+
+    @patch("pyspark.sql.DataFrameWriter.jdbc")
+    @patch("pyspark.sql.DataFrameWriter.parquet")
+    def test_write_df_target_parquet(
+        self, mock_write_parquet: MagicMock, mock_write_jdbc: MagicMock
+    ):
+        """Tests _write_df method when target is parquet."""
+        job_settings = self.job.job_settings.model_copy(
+            deep=True,
+            update={
+                "output_target": OutputTarget(
+                    output_type="parquet", output_location="test"
+                )
+            },
+        )
+        job = CompileS3MetricsJob(job_settings=job_settings, spark=self.spark)
+        test_df = self.spark.createDataFrame([(1, "foo")], ["id", "value"])
+        with self.assertLogs(level="INFO") as captured:
+            job._write_df(test_df)
+        self.assertEqual(1, len(captured.output))
+        mock_write_jdbc.assert_not_called()
+        mock_write_parquet.assert_called_once_with("test/weekly_report")
+
+    @patch("pyspark.sql.DataFrameWriter.jdbc")
+    @patch("pyspark.sql.DataFrameWriter.parquet")
+    def test_write_df_target_postgres(
+        self, mock_write_parquet: MagicMock, mock_write_jdbc: MagicMock
+    ):
+        """Tests _write_df method when target is postgres."""
+        job_settings = self.job.job_settings.model_copy(
+            deep=True,
+            update={
+                "output_target": OutputTarget(
+                    output_type="postgres",
+                    db_url="postgres://example:5432",
+                    db_username="test_user",
+                    db_password=SecretStr("password"),
+                )
+            },
+        )
+        job = CompileS3MetricsJob(job_settings=job_settings, spark=self.spark)
+        test_df = self.spark.createDataFrame([(1, "foo")], ["id", "value"])
+        with self.assertLogs(level="INFO") as captured:
+            job._write_df(test_df)
+        self.assertEqual(1, len(captured.output))
+        mock_write_jdbc.assert_called_once_with(
+            url="postgres://example:5432",
+            table="weekly_report",
+            mode="overwrite",
+            properties={
+                "user": "test_user",
+                "password": "password",
+                "driver": "org.postgresql.Driver",
+                "batchsize": "5000",
+                "stringtype": "unspecified",
+            },
+        )
+        mock_write_parquet.assert_not_called()
 
     @patch(f"{CLS_REF}._get_docdb_info")
     @patch(f"{CLS_REF}._get_latest_manifest")
     @patch(f"{CLS_REF}._get_inventory_list")
-    @patch(f"{CLS_REF}._get_inventory_df")
     @patch(f"{CLS_REF}._write_df")
     def test_run_job(
         self,
         mock_write_df: MagicMock,
-        mock_get_inventory_df: MagicMock,
         mock_get_inventory_list: MagicMock,
         mock_get_latest_manifest: MagicMock,
         mock_get_docdb_info: MagicMock,
@@ -199,11 +301,7 @@ class TestCompileS3MetricsJob(unittest.TestCase):
             latest_manifest_location,
             "2026-06-07T01-00Z",
         )
-        mock_get_inventory_list.return_value = ["s3a://bucket/prefix/a.csv.gz"]
-        mock_output_df = self.spark.read.option("multiLine", True).json(
-            str(self.expected_output_df_file)
-        )
-        mock_get_inventory_df.return_value = mock_output_df
+        mock_get_inventory_list.return_value = [str(self.csv_file_location)]
         with self.assertLogs(level="INFO") as captured:
             self.job.run_job()
         self.assertEqual(9, len(captured.output))
@@ -212,12 +310,14 @@ class TestCompileS3MetricsJob(unittest.TestCase):
         mock_get_inventory_list.assert_called_once_with(
             manifest_location=latest_manifest_location
         )
-        mock_get_inventory_df.assert_called_once_with(
-            s3_paths=["s3a://bucket/prefix/a.csv.gz"],
-            docdb_records=self.example_docdb_info,
-            report_date="2026-06-07T01-00Z",
+        mock_write_df.assert_called_once()
+        actual_output_df = mock_write_df.call_args.args[0]
+        expected_output_df = (
+            self.spark.read.option("multiLine", True)
+            .schema(actual_output_df.schema)
+            .json(str(self.expected_output_df_file))
         )
-        mock_write_df.assert_called_once_with(mock_output_df)
+        assertDataFrameEqual(actual_output_df, expected_output_df)
 
 
 if __name__ == "__main__":

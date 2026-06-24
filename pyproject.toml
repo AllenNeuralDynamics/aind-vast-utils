@@ -25,7 +25,7 @@ dependencies = [
     "jinja2>=3.1.0,<4.0",
     "requests>=2.32.0,<3.0",
     "tenacity>=9.1.0,<10.0",
-    "pyspark>=3.5.0,<4.0",
+    "pyspark>=4.1.0,<5.0",
     "aind-data-access-api[docdb]>=1.10.0,<2.0"
 ]
 
