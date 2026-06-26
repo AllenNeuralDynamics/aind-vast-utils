@@ -339,14 +339,19 @@ class CompileS3MetricsJob:
         # noinspection PyCallingNonCallable
         filtered_df = (
             inventory_df.withColumn(
-                "prefix", F.split(inventory_df["key"], "/").getItem(0)
+                "split_key", F.split(inventory_df["key"], "/")
             )
-            .withColumn(
-                "subpath", F.split(inventory_df["key"], "/").getItem(1)
-            )
+            .withColumn("prefix", F.split(inventory_df["key"], "/").getItem(0))
             .withColumn(
                 "subprefix",
-                F.concat_ws("/", F.col("prefix"), F.col("subpath")),
+                F.when(
+                    F.size(F.split(inventory_df["key"], "/")) >= 2,
+                    F.concat_ws(
+                        "/",
+                        F.col("prefix"),
+                        F.split(inventory_df["key"], "/").getItem(1),
+                    ),
+                ).otherwise(None),
             )
             .where(
                 (F.col("is_latest") == True)  # noqa: E712
@@ -458,9 +463,12 @@ if __name__ == "__main__":
     spark_conf = SparkConf().setAll(
         list(main_job_settings.spark_configs.items())
     )
-    with SparkSession.builder.config(conf=spark_conf).getOrCreate() as sp:
+    sp = SparkSession.builder.config(conf=spark_conf).getOrCreate()
+    try:
         main_job = CompileS3MetricsJob(
             job_settings=main_job_settings, spark=sp
         )
         main_job.run_job()
+    finally:
+        sp.stop()
     logger.info("Job finished!")
